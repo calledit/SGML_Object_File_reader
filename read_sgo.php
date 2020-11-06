@@ -9,7 +9,17 @@ echo "file: ".$argv[1]."\n";
 //https://strserg.com/VAG_dataflash/
 
 
+$dump_file = false;
+if(isset($argv[2]) && $argv[2] == 'dump'){
+	$dump_file = true;
+}
+
 $fh = fopen($argv[1], 'r');
+
+$fdump = false;
+if($dump_file){
+	$fdump = fopen($argv[1].'.bin', 'w');
+}
 
 $header = array();
 $header['sgoLabel'] = fread($fh, 17);
@@ -49,28 +59,48 @@ foreach($header['SGO_DATENBLOCKE'] AS $block_index){
 
 	fseek($fh, $block_index);
 	$block = array();
-	$block['start_adr'] = strToHex((fread($fh, 3)));
+	$block['start_adr'] = read_3byte_adr($fh);
 	$block['data_block_format'] = strToHex((fread($fh, 1)));
-	$block['size_after_decompression'] = strToHex((fread($fh, 3)));
-	$block['SGO_LOESCH_BEREICH_start_adr'] = strToHex((fread($fh, 3)));
-	$block['SGO_LOESCH_BEREICH_end_adr'] = strToHex((fread($fh, 3)));
-	$block['SGO_DATENBLOCK_CHECK_start_adr'] = strToHex((fread($fh, 3)));
-	$block['SGO_DATENBLOCK_CHECK_end_adr'] = strToHex((fread($fh, 3)));
+	$block['size_after_decompression'] = read_3byte_adr($fh);
+	$block['SGO_LOESCH_BEREICH_start_adr'] = read_3byte_adr($fh);
+	$block['SGO_LOESCH_BEREICH_end_adr'] = read_3byte_adr($fh);
+	$block['SGO_DATENBLOCK_CHECK_start_adr'] = read_3byte_adr($fh);
+	$block['SGO_DATENBLOCK_CHECK_end_adr'] = read_3byte_adr($fh);
 	$block['SGO_DATENBLOCK_CHECK_checksum'] = strToHex((fread($fh, 2)));
 
 	$block['SGO_DATENBLOCK_datenblock_daten_size'] = read_int($fh);
 
-	$block['SGO_DATENBLOCK_data'] = strToHex((fread($fh, $block['SGO_DATENBLOCK_datenblock_daten_size'])));
+	$data = fread($fh, $block['SGO_DATENBLOCK_datenblock_daten_size']);
+	//$block['SGO_DATENBLOCK_data'] = strToHex($data);
+	if($block['size_after_decompression'] != $block['SGO_DATENBLOCK_datenblock_daten_size']){
+		throw new Exception("commrepssion used");
+	}
+
+	if($fdump){
+		fseek($fdump, $block['start_adr']);
+		fwrite($fdump, $data);
+	}
+
 	//$block[''] = strToHex((fread($fh, 1)));
 	$data_blocks[] = $block;
 
 }
 
 var_dump($header);
-var_dump($data_blocks);
+if($fdump){
+	fclose($fdump);
+	echo "dumped file\n";
+}else{
+	var_dump($data_blocks);
+}
 
+function read_3byte_adr($fh){
+	$start_adr = fread($fh, 3);
+	$start_adr = $start_adr[2].$start_adr[1].$start_adr[0]."\0";
+	return unpack('V', $start_adr)[1];
+}
 function read_int($fh){
-	return unpack('L', fread($fh, 4))[1];
+	return unpack('V', fread($fh, 4))[1];
 }
 
 function xorstr($string){
