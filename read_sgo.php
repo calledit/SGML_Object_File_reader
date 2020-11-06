@@ -77,8 +77,11 @@ foreach($header['SGO_DATENBLOCKE'] AS $block_index){
 	}
 
 	if($fdump){
-		fseek($fdump, $block['start_adr']);
-		fwrite($fdump, $data);
+		$sp = fseek($fdump, $block['start_adr']);
+		if($sp != 0){
+			throw new Exception("failed to seek");
+		}
+		fwrite($fdump, xordat($data));
 	}
 
 	//$block[''] = strToHex((fread($fh, 1)));
@@ -87,11 +90,11 @@ foreach($header['SGO_DATENBLOCKE'] AS $block_index){
 }
 
 var_dump($header);
+var_dump($data_blocks);
 if($fdump){
 	fclose($fdump);
 	echo "dumped file\n";
 }else{
-	var_dump($data_blocks);
 }
 
 function read_3byte_adr($fh){
@@ -102,6 +105,15 @@ function read_3byte_adr($fh){
 function read_int($fh){
 	return unpack('V', fread($fh, 4))[1];
 }
+function xordat($string){
+	$str = '';
+    for ($i=0; $i<strlen($string); $i++){
+		$c = ord($string[$i]);
+		$str .= chr($c^0xff);
+	}
+	return $str;
+}
+
 
 function xorstr($string){
 	$str = '';
