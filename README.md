@@ -6,6 +6,6 @@ dumps contents of SGML Object File version 2 files ( .sgo files ) a file format 
 #shows the files data
 php read_sgo.php file.sgo
 
-#dumps the contents to a .bin file
+#dumps the contents to a .bin file padded with zeros for parts that has no data.
 php read_sgo.php file.sgo dump
 ```
